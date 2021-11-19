@@ -4,7 +4,7 @@
              :expand-on-click-node="false"
              show-checkbox
              node-key="catId"
-             :default-expanded-keys="expandedkey"
+             :default-expanded-keys="exPanDedKey"
              draggable
              :allow-drop="allowDrop">
       <span class="custom-tree-node" slot-scope="{ node, data }">
@@ -63,6 +63,7 @@ export default {
   name: 'category',
   data () {
     return {
+      maxLevel: 0,
       title: '',
       dialogType: '',
       category: {
@@ -77,7 +78,7 @@ export default {
       },
       dialogVisible: false,
       menu: [],
-      expandedkey: [],
+      exPanDedKey: [],
       defaultProps: {
         children: 'children',
         label: 'name'
@@ -87,7 +88,31 @@ export default {
   methods: {
     // 拖拽实现改变分类层级
     allowDrop (draggingNode, dropNode, type) {
-      return false
+      console.log('draggingNode:', draggingNode, 'dropNode:', dropNode, 'type:', type)
+      // 1. 被拖到的当前节点以及所在的父节点总层数不大于3
+      // 1.1） 确定被拖拽的当前节点总层数
+      this.countNodeLevel(draggingNode.data)
+      // 当前正在拖动的节点 + 父节点所在的最大层级（深度）不大于3即可
+      let deep = this.maxLevel - draggingNode.data.catLevel + 1
+      console.log('深度:', deep)
+
+      if (type === 'inner') {
+        return (deep + dropNode.data.catLevel) <= 3
+      } else {
+        return (deep + dropNode.parent.level) <= 3
+      }
+    },
+    // 找到了拖拽结点的最大层级(深度)
+    countNodeLevel (node) {
+      if (node.children != null && node.children.length > 0) {
+        for (let i = 0; i < node.children.length; i++) {
+          if (node.children[i].catLevel > this.maxLevel) {
+            this.maxLevel = node.children[i].catLevel
+          }
+          // 子字节下还有子节点，再次执行求出最大层级方法
+          this.countNodeLevel(node.children[i])
+        }
+      }
     },
     // 添加分类
     append (data) { // data为添加的节点数据
@@ -121,7 +146,7 @@ export default {
         // 刷新菜单
         this.getDataList()
         // 设置需要默认展开的菜单
-        this.expandedkey = [this.category.parentCid]
+        this.exPanDedKey = [this.category.parentCid]
       })
     },
     // 删除分类
@@ -142,7 +167,7 @@ export default {
           // 刷新菜单
           this.getDataList()
           // 设置需要默认展开的菜单
-          this.expandedkey = [node.parent.data.catId]
+          this.exPanDedKey = [node.parent.data.catId]
         })
         console.log('remove', node, data)
         this.$message({
@@ -196,7 +221,7 @@ export default {
         // 刷新出新的菜单
         this.getDataList()
         // 设置需要默认展开的菜单
-        this.expandedKey = [this.category.parentCid]
+        this.exPanDedKey = [this.category.parentCid]
       })
     },
     // 判断执行 提交修改分类数据方法/提交添加的分类数据方法
